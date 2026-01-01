@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WEBHOOK_URL="${DISCORD_WEBHOOK_URL}"
+WEBHOOK_URL="${MEMES_DISCORD}"
+
 USER_AGENT="dev0root-random-tech-media/2.0"
 
 SUBREDDITS=(

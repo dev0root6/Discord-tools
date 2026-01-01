@@ -1,0 +1,25 @@
+name: Tech News (Every 4 Hours)
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Run news script
+        env:
+          NEWS_DISCORD: ${{ secrets.NEWS_DISCORD }}
+        run: |
+          chmod +x richie.sh
+          ./richie.sh
+
