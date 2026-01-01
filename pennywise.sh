@@ -14,7 +14,7 @@ SUBREDDITS=(
 )
 
 SUB="${SUBREDDITS[$RANDOM % ${#SUBREDDITS[@]}]}"
-URL="https://www.reddit.com/r/${SUB}/new.json?limit=100"
+URL="https://old.reddit.com/r/${SUB}/new.json?limit=100&raw_json=1"
 
 TMP_JSON="$(mktemp)"
 trap 'rm -f "$TMP_JSON"' EXIT
