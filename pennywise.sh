@@ -2,8 +2,7 @@
 set -euo pipefail
 
 WEBHOOK_URL="${MEMES_DISCORD}"
-
-USER_AGENT="dev0root-random-tech-media/2.0"
+USER_AGENT="dev0root-reddit-bot/2.1 (github.com/dev0root)"
 
 SUBREDDITS=(
   aimemes
@@ -17,8 +16,19 @@ SUBREDDITS=(
 SUB="${SUBREDDITS[$RANDOM % ${#SUBREDDITS[@]}]}"
 URL="https://www.reddit.com/r/${SUB}/new.json?limit=100"
 
-JSON=$(curl -s -H "User-Agent: $USER_AGENT" "$URL")
+# ---------- FETCH ----------
+JSON=$(curl -s \
+  -H "User-Agent: $USER_AGENT" \
+  -H "Accept: application/json" \
+  "$URL")
 
+# ---------- VALIDATE JSON ----------
+if ! echo "$JSON" | jq empty >/dev/null 2>&1; then
+  echo "Reddit returned non-JSON response (rate-limit / HTML)"
+  exit 0
+fi
+
+# ---------- EXTRACT MEDIA ----------
 MEDIA=$(echo "$JSON" | jq -c '
   .data.children[]
   | .data
@@ -36,7 +46,7 @@ MEDIA=$(echo "$JSON" | jq -c '
         (
           if .is_video == true and .media.reddit_video.fallback_url then
             .media.reddit_video.fallback_url
-          elif .is_gallery == true then
+          elif .is_gallery == true and .media_metadata then
             .media_metadata | to_entries[0].value.s.u
           else
             (.url_overridden_by_dest
@@ -55,6 +65,7 @@ if [ "$COUNT" -eq 0 ]; then
   exit 0
 fi
 
+# ---------- RANDOM PICK ----------
 INDEX=$((RANDOM % COUNT))
 SELECTED=$(echo "$MEDIA" | sed -n "$((INDEX + 1))p")
 
@@ -64,7 +75,7 @@ MEDIA_URL=$(echo "$SELECTED" | jq -r '.media' | sed 's/&amp;/\&/g')
 LINK=$(echo "$SELECTED" | jq -r '.permalink')
 SRC=$(echo "$SELECTED" | jq -r '.subreddit')
 
-# Build payload differently for image vs video
+# ---------- DISCORD PAYLOAD ----------
 if [ "$TYPE" = "image" ]; then
   PAYLOAD=$(jq -n \
     --arg title "$TITLE" \
@@ -72,7 +83,7 @@ if [ "$TYPE" = "image" ]; then
     --arg link "$LINK" \
     --arg sub "$SRC" \
     '{
-      content: " :clown: **Pennywise** - The Mememing Clown",
+      content: "🤡 **Pennywise — The Mememing Clown**",
       embeds: [
         {
           title: $title,
@@ -89,7 +100,7 @@ else
     --arg link "$LINK" \
     --arg sub "$SRC" \
     '{
-      content: "🎥 **Pennywise - The mememing clown(Video)**\n" + $video,
+      content: "🎥 **Pennywise — The Mememing Clown (Video)**\n" + $video,
       embeds: [
         {
           title: $title,
@@ -100,8 +111,8 @@ else
     }')
 fi
 
+# ---------- SEND ----------
 curl -s -X POST \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD" \
   "$WEBHOOK_URL"
-
